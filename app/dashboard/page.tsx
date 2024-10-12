@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { CirclePlus } from 'lucide-react';
+import { db } from '@/db';
+import { Invoices } from '@/db/schema';
 import {
   Table,
   TableBody,
@@ -12,7 +14,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const invoices = await db.select().from(Invoices);
+
   return (
     <main className='flex justify-center gap-6 flex-col text-center max-w-5xl mx-auto my-12'>
       <div className='flex justify-between'>
@@ -39,42 +43,30 @@ export default function DashboardPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow>
-            <TableCell className='font-medium text-left py-4'>
-              <span className='font-semibold'>10/15/2024</span>
-            </TableCell>
-            <TableCell className='text-left py-4'>
-              <span className='font-semibold'>Tony Stark</span>
-            </TableCell>
-            <TableCell className='text-left py-4'>
-              <span className=''>tony@avengers.com</span>
-            </TableCell>
-            <TableCell className='text-center py-4'>
-              <Badge className='rounded-full'>Paid</Badge>
-            </TableCell>
+          {invoices.map((invoice) => (
+            <TableRow key={invoice.id}>
+              <TableCell className='font-medium text-left py-4'>
+                <span className='font-semibold'>
+                  {new Date(invoice.createTs).toLocaleDateString()}
+                </span>
+              </TableCell>
+              <TableCell className='text-left py-4'>
+                <span className='font-semibold'>Tony Stark</span>
+              </TableCell>
+              <TableCell className='text-left py-4'>
+                <span className=''>tony@avengers.com</span>
+              </TableCell>
+              <TableCell className='text-center py-4'>
+                <Badge className='rounded-full'>{invoice.status}</Badge>
+              </TableCell>
 
-            <TableCell className='text-right py-4'>
-              <span className='font-semibold'></span>$2500.00
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className='font-medium text-left py-4'>
-              <span className='font-semibold'>10/25/2024</span>
-            </TableCell>
-            <TableCell className='text-left py-4'>
-              <span className='font-semibold'>Steve Rogers</span>
-            </TableCell>
-            <TableCell className='text-left py-4'>
-              <span className=''>steve@avengers.com</span>
-            </TableCell>
-            <TableCell className='text-center py-4'>
-              <Badge className='rounded-full'>Open</Badge>
-            </TableCell>
-
-            <TableCell className='text-right py-4'>
-              <span className='font-semibold'></span>$250.00
-            </TableCell>
-          </TableRow>
+              <TableCell className='text-right py-4'>
+                <span className='font-semibold'>
+                  ${(invoice.amount / 100).toFixed(2)}
+                </span>
+              </TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </main>
