@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export default async function DashboardPage() {
   const invoices = await db.select().from(Invoices);
@@ -45,25 +46,56 @@ export default async function DashboardPage() {
         <TableBody>
           {invoices.map((invoice) => (
             <TableRow key={invoice.id}>
-              <TableCell className='font-medium text-left py-4'>
-                <span className='font-semibold'>
+              <TableCell className='font-medium text-left p-0'>
+                <Link
+                  href={`/invoices/${invoice.id}`}
+                  className='font-semibold py-4 block'
+                >
                   {new Date(invoice.createTs).toLocaleDateString()}
-                </span>
+                </Link>
               </TableCell>
-              <TableCell className='text-left py-4'>
-                <span className='font-semibold'>Tony Stark</span>
+              <TableCell className='text-left p-0'>
+                <Link
+                  href={`/invoices/${invoice.id}`}
+                  className='font-semibold py-4 block'
+                >
+                  Tony Stark
+                </Link>
               </TableCell>
-              <TableCell className='text-left py-4'>
-                <span className=''>tony@avengers.com</span>
+              <TableCell className='text-left p-0'>
+                <Link
+                  href={`/invoices/${invoice.id}`}
+                  className='font-semibold py-4 block'
+                >
+                  tony@avengers.com
+                </Link>
               </TableCell>
-              <TableCell className='text-center py-4'>
-                <Badge className='rounded-full'>{invoice.status}</Badge>
+              <TableCell className='text-center p-0'>
+                <Link
+                  href={`/invoices/${invoice.id}`}
+                  className='font-semibold py-4 block'
+                >
+                  <Badge
+                    className={cn(
+                      'rounded-full capitalize',
+                      invoice.status === 'paid' && 'bg-green-300',
+                      invoice.status === 'open' && 'bg-yellow-200',
+                      invoice.status === 'void' && 'bg-purple-300',
+                      invoice.status === 'uncollectible' && 'bg-red-300'
+                    )}
+                  >
+                    {invoice.status}
+                  </Badge>
+                </Link>
               </TableCell>
 
-              <TableCell className='text-right py-4'>
-                <span className='font-semibold'>
+              <TableCell className='text-right p-0'>
+                <Link
+                  href={`/invoices/${invoice.id}`}
+                  className='font-semibold py-4 block'
+                >
                   ${(invoice.amount / 100).toFixed(2)}
-                </span>
+                </Link>
               </TableCell>
             </TableRow>
           ))}
