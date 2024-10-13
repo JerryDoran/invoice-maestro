@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { db } from '@/db';
 import { Invoices } from '@/db/schema';
@@ -11,11 +12,19 @@ export default async function InvoicePage({
 }) {
   const invoiceId = parseInt(params.invoiceId);
 
+  if (isNaN(invoiceId)) {
+    throw new Error('Invalid invoice ID!');
+  }
+
   const [invoice] = await db
     .select()
     .from(Invoices)
     .where(eq(Invoices.id, invoiceId))
     .limit(1);
+
+  if (!invoice) {
+    notFound();
+  }
 
   return (
     <main className='max-w-5xl mx-auto my-12'>
