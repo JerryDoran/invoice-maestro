@@ -2,7 +2,7 @@
 'use client';
 
 import { useOptimistic } from 'react';
-import { Invoices } from '@/db/schema';
+import { Customers, Invoices } from '@/db/schema';
 import { cn } from '@/lib/utils';
 
 import { availableStatuses } from '@/data/invoices';
@@ -29,7 +29,9 @@ import { updateStatus, deleteInvoice } from '@/actions';
 import { ChevronDown, Ellipsis, Trash2 } from 'lucide-react';
 
 type InvoiceProps = {
-  invoice: typeof Invoices.$inferSelect;
+  invoice: typeof Invoices.$inferSelect & {
+    customer: typeof Customers.$inferSelect;
+  };
 };
 
 export default function Invoice({ invoice }: InvoiceProps) {
@@ -112,10 +114,12 @@ export default function Invoice({ invoice }: InvoiceProps) {
 
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Are you absolutely sure?</DialogTitle>
+                  <DialogTitle className='text-2xl'>
+                    Delete invoice?
+                  </DialogTitle>
                   <DialogDescription>
                     This action cannot be undone. This will permanently delete
-                    your account and remove your data from our servers.
+                    your invoice.
                   </DialogDescription>
                   <DialogFooter>
                     <form action={deleteInvoice}>
@@ -155,13 +159,13 @@ export default function Invoice({ invoice }: InvoiceProps) {
             <strong className='block w-28 flex-shrink-0 font-medium text-sm'>
               Billing Name
             </strong>
-            <span></span>
+            <span>{invoice.customer.name}</span>
           </li>
           <li className='flex gap-4'>
             <strong className='block w-28 flex-shrink-0 font-medium text-sm'>
               Billing Email
             </strong>
-            <span></span>
+            <span>{invoice.customer.email}</span>
           </li>
         </ul>
       </Container>

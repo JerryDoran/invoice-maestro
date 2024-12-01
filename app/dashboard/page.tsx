@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { auth } from '@clerk/nextjs/server';
 import { CirclePlus } from 'lucide-react';
 import { db } from '@/db';
-import { Invoices } from '@/db/schema';
+import { Customers, Invoices } from '@/db/schema';
 import {
   Table,
   TableBody,
@@ -21,11 +21,19 @@ import { eq } from 'drizzle-orm';
 export default async function DashboardPage() {
   const { userId } = auth();
   if (!userId) return;
-  
-  const invoices = await db
+
+  const results = await db
     .select()
     .from(Invoices)
+    .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
     .where(eq(Invoices.userId, userId));
+
+  const invoices = results?.map(({ invoices, customers }) => {
+    return {
+      ...invoices,
+      customer: customers,
+    };
+  });
 
   return (
     <main className='h-full'>
@@ -69,7 +77,7 @@ export default async function DashboardPage() {
                     href={`/invoices/${invoice.id}`}
                     className='font-semibold py-4 block'
                   >
-                    Tony Stark
+                    {invoice.customer.name}
                   </Link>
                 </TableCell>
                 <TableCell className='text-left p-0'>
@@ -77,7 +85,7 @@ export default async function DashboardPage() {
                     href={`/invoices/${invoice.id}`}
                     className='font-semibold py-4 block'
                   >
-                    tony@avengers.com
+                    {invoice.customer.email}
                   </Link>
                 </TableCell>
                 <TableCell className='text-center p-0'>

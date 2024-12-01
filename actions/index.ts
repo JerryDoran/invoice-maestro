@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/db';
-import { Invoices, Status } from '@/db/schema';
+import { Customers, Invoices, Status } from '@/db/schema';
 import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
 import { and, eq } from 'drizzle-orm';
@@ -10,12 +10,26 @@ import { revalidatePath } from 'next/cache';
 
 export async function createInvoice(formData: FormData) {
   const { userId } = auth();
+
+  if (!userId) return;
+
   const amount = Math.floor(
     Number.parseFloat(String(formData.get('amount'))) * 100
   );
   const description = formData.get('description') as string;
+  const name = formData.get('name') as string;
+  const email = formData.get('email') as string;
 
-  if (!userId) return;
+  const [customer] = await db
+    .insert(Customers)
+    .values({
+      name,
+      email,
+      userId,
+    })
+    .returning({
+      id: Customers.id,
+    });
 
   await db
     .insert(Invoices)
@@ -23,6 +37,7 @@ export async function createInvoice(formData: FormData) {
       amount,
       description,
       userId,
+      customerId: customer.id,
       status: 'open',
     })
     .returning({
