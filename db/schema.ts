@@ -27,6 +27,7 @@ export const Invoices = pgTable('invoices', {
     .notNull()
     .references(() => Customers.id),
   userId: text('userId').notNull(),
+  organizationId: text('organizationId'),
 });
 
 export const Customers = pgTable('customers', {
@@ -35,4 +36,5 @@ export const Customers = pgTable('customers', {
   email: text('email').notNull(),
   name: text('name').notNull(),
   userId: text('userId').notNull(),
+  organizationId: text('organizationId'),
 });

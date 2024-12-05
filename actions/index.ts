@@ -5,11 +5,14 @@ import { db } from '@/db';
 import { Customers, Invoices, Status } from '@/db/schema';
 import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_API_SECRET!);
 
 export async function createInvoice(formData: FormData) {
-  const { userId } = auth();
+  const { userId, orgId } = auth();
 
   if (!userId) return;
 
@@ -26,6 +29,7 @@ export async function createInvoice(formData: FormData) {
       name,
       email,
       userId,
+      organizationId: orgId || null,
     })
     .returning({
       id: Customers.id,
@@ -39,6 +43,7 @@ export async function createInvoice(formData: FormData) {
       userId,
       customerId: customer.id,
       status: 'open',
+      organizationId: orgId || null,
     })
     .returning({
       id: Invoices.id,
@@ -49,33 +54,62 @@ export async function createInvoice(formData: FormData) {
 }
 
 export async function updateStatus(formData: FormData) {
-  const { userId } = auth();
+  const { userId, orgId } = auth();
 
   if (!userId) return;
 
   const id = formData.get('id') as string;
   const status = formData.get('status') as Status;
 
-  const results = await db
-    .update(Invoices)
-    .set({ status })
-    .where(and(eq(Invoices.id, parseInt(id)), eq(Invoices.userId, userId)));
+  let results;
+  if (orgId) {
+    results = await db
+      .update(Invoices)
+      .set({ status })
+      .where(
+        and(eq(Invoices.id, parseInt(id)), eq(Invoices.organizationId, orgId))
+      );
+  } else {
+    results = await db
+      .update(Invoices)
+      .set({ status })
+      .where(
+        and(
+          eq(Invoices.id, parseInt(id)),
+          eq(Invoices.userId, userId),
+          isNull(Invoices.organizationId)
+        )
+      );
+  }
 
   console.log(results);
   revalidatePath(`/invoices/${id}`, 'page');
 }
 
 export async function deleteInvoice(formData: FormData) {
-  const { userId } = auth();
+  const { userId, orgId } = auth();
 
   if (!userId) return;
 
   const id = formData.get('id') as string;
 
-  const results = await db
-    .delete(Invoices)
-    .where(and(eq(Invoices.id, parseInt(id)), eq(Invoices.userId, userId)));
+  if (orgId) {
+    await db
+      .delete(Invoices)
+      .where(
+        and(eq(Invoices.id, parseInt(id)), eq(Invoices.organizationId, orgId))
+      );
+  } else {
+    await db
+      .delete(Invoices)
+      .where(
+        and(
+          eq(Invoices.id, parseInt(id)),
+          eq(Invoices.userId, userId),
+          isNull(Invoices.organizationId)
+        )
+      );
+  }
 
-  console.log(results);
   redirect('/dashboard');
 }

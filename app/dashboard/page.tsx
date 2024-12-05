@@ -16,17 +16,27 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import Container from '@/components/container';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 export default async function DashboardPage() {
-  const { userId } = auth();
+  const { userId, orgId } = auth();
   if (!userId) return;
 
-  const results = await db
-    .select()
-    .from(Invoices)
-    .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
-    .where(eq(Invoices.userId, userId));
+  let results;
+
+  if (orgId) {
+    results = await db
+      .select()
+      .from(Invoices)
+      .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
+      .where(eq(Invoices.organizationId, orgId));
+  } else {
+    results = await db
+      .select()
+      .from(Invoices)
+      .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
+      .where(and(eq(Invoices.userId, userId), isNull(Invoices.organizationId)));
+  }
 
   const invoices = results?.map(({ invoices, customers }) => {
     return {
