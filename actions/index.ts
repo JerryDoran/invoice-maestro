@@ -8,6 +8,7 @@ import { auth } from '@clerk/nextjs/server';
 import { and, eq, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import Stripe from 'stripe';
+import { headers } from 'next/headers';
 
 const stripe = new Stripe(process.env.STRIPE_API_SECRET!);
 
@@ -112,4 +113,41 @@ export async function deleteInvoice(formData: FormData) {
   }
 
   redirect('/dashboard');
+}
+
+export async function createPayment(formData: FormData) {
+  const headersList = headers();
+  const origin = headersList.get('origin');
+  const id = parseInt(formData.get('id') as string);
+
+  const [result] = await db
+    .select({
+      status: Invoices.status,
+      amount: Invoices.amount,
+    })
+    .from(Invoices)
+    .where(eq(Invoices.id, id))
+    .limit(1);
+
+  const session = await stripe.checkout.sessions.create({
+    line_items: [
+      {
+        // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+        price_data: {
+          currency: 'usd',
+          product: 'prod_RM7Sy8vUkJ1cHa',
+          unit_amount: result.amount,
+        },
+        quantity: 1,
+      },
+    ],
+    mode: 'payment',
+    success_url: `${origin}/invoices/${id}/payment?status=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/invoices/${id}/payment?status=canceled&session_id={CHECKOUT_SESSION_ID}`,
+  });
+
+  if (!session.url) {
+    throw new Error('Invalid Session');
+  }
+  redirect(session.url);
 }

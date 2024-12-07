@@ -2,6 +2,7 @@
 
 import { Customers, Invoices } from '@/db/schema';
 import { cn } from '@/lib/utils';
+import Stripe from 'stripe';
 
 import { Badge } from '@/components/ui/badge';
 import Container from '@/components/container';
@@ -12,16 +13,46 @@ import { eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Check, CreditCard } from 'lucide-react';
+import { createPayment, updateStatus } from '@/actions';
+
+const stripe = new Stripe(process.env.STRIPE_API_SECRET!);
+
+type InvoicePageProps = {
+  params: { invoiceId: string };
+  searchParams: { status: string; session_id: string };
+};
 
 export default async function Invoice({
   params,
-}: {
-  params: { invoiceId: string };
-}) {
+  searchParams,
+}: InvoicePageProps) {
   const invoiceId = parseInt(params.invoiceId);
+
+  const sessionId = searchParams.session_id;
+  const isSuccess = sessionId && searchParams.status === 'success';
+  const isCanceled = searchParams.status === 'canceled';
+  let isError = isSuccess && !sessionId;
+
+  console.log('isSuccess', isSuccess);
+  console.log('isCanceled', isCanceled);
 
   if (isNaN(invoiceId)) {
     throw new Error('Invalid invoice ID!');
+  }
+
+  if (isSuccess) {
+    const { payment_status } = await stripe.checkout.sessions.retrieve(
+      sessionId
+    );
+
+    if (payment_status !== 'paid') {
+      isError = true;
+    } else {
+      const formData = new FormData();
+      formData.append('id', params.invoiceId);
+      formData.append('status', 'paid');
+      await updateStatus(formData);
+    }
   }
 
   const [result] = await db
@@ -51,6 +82,16 @@ export default async function Invoice({
   return (
     <main className='mx-auto my-12 w-full'>
       <Container>
+        {isError && (
+          <p className='bg-red-100 text-sm text-red-800 text-center px-3 py-2 rounded-lg mb-5'>
+            Something went wrong, please try again!
+          </p>
+        )}
+        {isCanceled && (
+          <p className='bg-yellow-100 text-sm text-yellow-800 text-center px-3 py-2 rounded-lg mb-5'>
+            Payment was canceled, please try again!
+          </p>
+        )}
         <div className='grid grid-cols-2'>
           <div>
             <div className='flex justify-between mb-8'>
@@ -77,7 +118,8 @@ export default async function Invoice({
           <div>
             <h2 className='text-xl mb-4 font-semibold'>Manage invoice</h2>
             {invoice.status === 'open' && (
-              <form action=''>
+              <form action={createPayment}>
+                <input type='hidden' name='id' value={invoice.id} />
                 <Button className='flex gap-2 bg-green-700 font-bold text-white hover:bg-green-600 transition-colors'>
                   <CreditCard className='size-5' />
                   Pay Invoice
